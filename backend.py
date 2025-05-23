@@ -1230,10 +1230,6 @@ def addEfiBootEntry(mounts, disk, boot_partnum, install_type, branding):
                             "-d", disk, "-p", str(boot_partnum)], with_stderr=True)
     check_efibootmgr_err(rc, err, install_type, "Failed to add new efi boot entry")
 
-def setEfiBootEntry(mounts, disk, boot_partnum, install_type, branding):
-    clearEfiBootEntries(mounts, install_type, branding)
-    addEfiBootEntry(mounts, disk, boot_partnum, install_type, branding)
-
 def installGrub2(mounts, disk, force):
     if force:
         rc, err = util.runCmd2(["chroot", mounts['root'], "/usr/sbin/grub-install", "--target=i386-pc", "--force", disk], with_stderr=True)
@@ -1717,7 +1713,7 @@ def isSWRAIDSyncd(primary_disk):
         logger.log("Failed to check if SWRAID device is sync'd due to: " + str(ex))
         return False
 
-def completeSWRAID(mounts, primary_disk, physical_disks, write_boot_entry, install_type, branding, boot_partnum, primary_partnum, logs_partnum, target_boot_mode):
+def completeSWRAID(mounts, primary_disk, physical_disks, write_boot_entry, install_type, branding, boot_partnum, primary_partnum, logs_partnum, target_boot_mode, remount=True):
     waitForSWRAIDSyncComplete(primary_disk)
 
     if os.path.exists(os.path.join(mounts['esp'], 'EFI/xenserver/shimx64.efi')):
@@ -1743,7 +1739,9 @@ def completeSWRAID(mounts, primary_disk, physical_disks, write_boot_entry, insta
             check_efibootmgr_err(rc, err, install_type, "Failed to add new efi boot entry")
 
     util.runCmd2(['mdadm', '--assemble', '--scan'])
-    new_mounts, _ = mountVolumes(primary_disk, boot_partnum, primary_partnum, logs_partnum, [], target_boot_mode)
+    new_mounts = {}
+    if remount:
+        new_mounts, _ = mountVolumes(primary_disk, boot_partnum, primary_partnum, logs_partnum, [], target_boot_mode)
     return new_mounts
 
 
